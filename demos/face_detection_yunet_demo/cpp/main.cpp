@@ -39,7 +39,7 @@ int main(int argc, char** argv)
         "{help h usage ?  |                          | YuNet: A Fast and Accurate CNN-based Face Detector (https://github.com/ShiqiYu/libfacedetection). }"
         "{input i         |                          | Path to the input image or video. Omit for using default camera.}"
         "{model m         |                          | Path to the model. You can download model "
-                                                       "from https://github.com/ShiqiYu/libfacedetection.train/blob/a61a428929148171b488f024b5d6774f93cdbc13/tasks/task1/onnx/yunet.onnx}"
+                                                       "from https://github.com/opencv/opencv_zoo/blob/master/models/face_detection_yunet/face_detection_yunet_2022mar.onnx}"
         "{backend b       | dnn::DNN_BACKEND_OPENCV  | Select a computation backend: "
                                                           "dnn::DNN_BACKEND_OPENCV, "
                                                           "dnn::DNN_BACKEND_CUDA } "
