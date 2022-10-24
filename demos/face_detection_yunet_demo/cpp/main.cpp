@@ -38,8 +38,7 @@ int main(int argc, char** argv)
     const cv::String keys =
         "{help h usage ?  |                          | YuNet: A Fast and Accurate CNN-based Face Detector (https://github.com/ShiqiYu/libfacedetection). }"
         "{input i         |                          | Path to the input image or video. Omit for using default camera.}"
-        "{model m         |                          | Path to the model. You can download model "
-                                                       "from https://github.com/opencv/opencv_zoo/blob/master/models/face_detection_yunet/face_detection_yunet_2022mar.onnx}"
+        "{model m         |                          | Path to the model.}"
         "{backend b       | dnn::DNN_BACKEND_OPENCV  | Select a computation backend: "
                                                           "dnn::DNN_BACKEND_OPENCV, "
                                                           "dnn::DNN_BACKEND_CUDA } "
