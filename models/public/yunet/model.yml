@@ -1,17 +1,18 @@
 # Copyright (c)
 description: >-
-    YuNet ONNX model for face detection task. For details, see <https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet>. For details on training this model, please visit <https://github.com/ShiqiYu/libfacedetection.train>
+  YuNet ONNX model for face detection task. For details, see repository <https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet>.
+  For details on training this model, please visit https://github.com/ShiqiYu/libfacedetection.train.
 task_type: detection
 files:
   - name: face_detection_yunet_2022mar.onnx
     size: 345478
     checksum: 4753fb96538bdf97a9c8c3ce1e4c297ecf74881ae39aedf27f2aa6dd4412829d7a3956bfb7e9368dad7932299b0cd32d
-    source: https://github.com/SinM9/YuNet/blob/main/face_detection_yunet_2022mar.onnx?raw=true
+    source: https://raw.githubusercontent.com/SinM9/YuNet/main/face_detection_yunet_2022mar.onnx
 input_info:
   - name: input
     shape: [1, 3, 120, 160]
     layout: NCWH
 model_optimizer_args:
-  - --input_model="DIR\face_detection_yunet_2022mar.onnx"
+  - --input_model=$dl_dir/face_detection_yunet_2022mar.onnx
 framework: onnx
-license: https://github.com/opencv/opencv_zoo/blob/master/models/face_detection_yunet/LICENSE
+license: https://raw.githubusercontent.com/opencv/opencv_zoo/master/models/face_detection_yunet/LICENSE

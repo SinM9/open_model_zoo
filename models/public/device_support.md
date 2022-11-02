@@ -153,3 +153,4 @@
 | yolo-v4-tiny-tf | YES | YES | YES |
 | yolof | YES | YES |    |
 | yolox-tiny | YES | YES | |
+| yunet | YES |    |    |
