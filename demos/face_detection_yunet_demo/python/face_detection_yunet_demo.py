@@ -87,7 +87,6 @@ def print_raw_results(faces, frame_id):
             log.debug('Face {}, top-left coordinates: ({:.0f}, {:.0f}), box width: {:.0f}, box height {:.0f}, score: {:.2f}'
                         .format(idx, face[0], face[1], face[2], face[3], face[-1]))
 
-
 def main():
     # Parsing input args
     args = build_argparser().parse_args()
@@ -176,6 +175,5 @@ def main():
     for rep in presenter.reportMeans():
         log.info(rep)
 
-        
 if __name__ == '__main__':
     sys.exit(main() or 0)
