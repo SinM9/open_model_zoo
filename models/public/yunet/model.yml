@@ -13,6 +13,7 @@ input_info:
     shape: [1, 3, 120, 160]
     layout: NCWH
 model_optimizer_args:
+  - --output=loc,conf,iou
   - --input_model=$dl_dir/face_detection_yunet_2022mar.onnx
 framework: onnx
 license: https://raw.githubusercontent.com/opencv/opencv_zoo/master/models/face_detection_yunet/LICENSE
