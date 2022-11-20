@@ -29,13 +29,11 @@ constexpr char i_msg[] =
     " video file or camera id. Omit for using default camera.";
 DEFINE_string(i, "0", i_msg);
 
-constexpr char b_msg[] = "Select a computation backend: "
-                         "dnn::DNN_BACKEND_OPENCV, dnn::DNN_BACKEND_CUDA";
-DEFINE_uint32(b, 0, b_msg);
+constexpr char b_msg[] = "Select a computation backend: OPENCV (default), CUDA";
+DEFINE_string(b, "OPENCV", b_msg);
 
-constexpr char t_msg[] = "Select a target device: dnn::DNN_TARGET_CPU,"
-                         " dnn::DNN_TARGET_CUDA, dnn::DNN_TARGET_CUDA_FP16";
-DEFINE_uint32(t, 0, t_msg);
+constexpr char t_msg[] = "Select a target device: CPU (default), CUDA, CUDA_FP16";
+DEFINE_string(t, "CPU", t_msg);
 
 constexpr char conf_msg[] = "Filter out faces of score < score_threshold";
 DEFINE_double(conf_threshold, 0.9, conf_msg);
@@ -77,8 +75,8 @@ void parse(int argc, char *argv[]) {
                   << "\n\t[--help]                                      print help on all arguments"
                   << "\n\t  -m <MODEL FILE>                             " << m_msg
                   << "\n\t[ -i <INPUT>]                                 " << i_msg
-                  << "\n\t[ -b <NUMBER>]                                " << b_msg
-                  << "\n\t[ -t <NUMBER>]                                " << t_msg
+                  << "\n\t[ -b]                                         " << b_msg
+                  << "\n\t[ -t]                                         " << t_msg
                   << "\n\t[ -conf_threshold <NUMBER>]                   " << conf_msg
                   << "\n\t[ -nms_threshold <NUMBER>]                    " << nms_msg
                   << "\n\t[ -top_k <NUMBER>]                            " << top_k_msg
@@ -101,21 +99,23 @@ void parse(int argc, char *argv[]) {
         throw std::invalid_argument{"-m <MODEL FILE> can't be empty"};
     } if (!FLAGS_output_resolution.empty() && FLAGS_output_resolution.find("x") == std::string::npos) {
         throw std::logic_error("Correct format of -output_resolution parameter is \"width\"x\"height\".");
+    } if (!FLAGS_t.empty() && !(FLAGS_t == "CPU" || FLAGS_t == "CUDA" || FLAGS_t == "CUDA_FP16")) {
+        throw std::invalid_argument{"-t must be value from list: CPU (default), CUDA, CUDA_FP16"};
+    } if (!FLAGS_b.empty() && !(FLAGS_b == "OPENCV" || FLAGS_t == "CUDA")) {
+        throw std::invalid_argument{"-b must be value from list: OPENCV (default), CUDA"};
     }
     slog::info << ov::get_openvino_version() << slog::endl;
     slog::info << "OpenCV version: " << CV_VERSION << slog::endl;
 }
 } // namespace
 
-void visualize(cv::Mat& input, cv::Mat& faces, int thickness = 2)
-{
-    for (int i = 0; i < faces.rows; ++i)
-    {
+void visualize(cv::Mat& input, cv::Mat& faces, int thickness = 2) {
+    for (int i = 0; i < faces.rows; ++i) {
         // Draw bounding box
         rectangle(input, cv::Rect2i(int(faces.at<float>(i, 0)), int(faces.at<float>(i, 1)), int(faces.at<float>(i, 2)), int(faces.at<float>(i, 3))), cv::Scalar(0, 255, 0), thickness);
         // Put score
-        std::string score = cv::format("%.2f", faces.at<float>(i, 14));
-        putText(input, score, cv::Point(int(faces.at<float>(i, 0)), int(faces.at<float>(i, 1))+12), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 2);
+        std::string score = cv::format("%.f", faces.at<float>(i, 14) * 100) + '%';
+        putHighlightedText(input, score, cv::Point(int(faces.at<float>(i, 0)), int(faces.at<float>(i, 1))-3), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 2);
         // Draw landmarks
         circle(input, cv::Point2i(int(faces.at<float>(i, 4)), int(faces.at<float>(i, 5))), 2, cv::Scalar(255, 0, 0), thickness);
         circle(input, cv::Point2i(int(faces.at<float>(i, 6)), int(faces.at<float>(i, 7))), 2, cv::Scalar(0, 0, 255), thickness);
@@ -125,12 +125,10 @@ void visualize(cv::Mat& input, cv::Mat& faces, int thickness = 2)
     }
 }
 
-void printRawResults(cv::Mat& faces, int frame_id)
-{
+void printRawResults(cv::Mat& faces, int frame_id) {
     slog::info << "  -------------------------- Frame " << frame_id << " --------------------------  "  << slog::endl;
     if (!faces.empty()) {
-        for (int i = 0; i < faces.rows; ++i)
-        {
+        for (int i = 0; i < faces.rows; ++i) {
             slog::info << "Face " << i
                 << ", top-left coordinates: (" << faces.at<float>(i, 0) << ", " << faces.at<float>(i, 1) << "), "
                 << "box width: " << faces.at<float>(i, 2)  << ", box height: " << faces.at<float>(i, 3) << ", "
@@ -150,10 +148,15 @@ int main(int argc, char** argv)
     // Preparing Input
     std::unique_ptr<ImagesCapture> cap = openImagesCapture(FLAGS_i, FLAGS_loop);
 
+    std::map<std::string, int> targets{{"CPU", cv::dnn::DNN_TARGET_CPU}, {"CUDA", cv::dnn::DNN_TARGET_CUDA}, {"CUDA_FP16", cv::dnn::DNN_TARGET_CUDA_FP16}};
+    std::map<std::string, int> backends{{"OPENCV", cv::dnn::DNN_BACKEND_OPENCV}, {"CUDA", cv::dnn::DNN_BACKEND_CUDA}};
+
     cv::Ptr<cv::FaceDetectorYN> model = cv::FaceDetectorYN::create(FLAGS_m, "", {320, 320}, 
                                             static_cast<float>(FLAGS_conf_threshold), 
                                             static_cast<float>(FLAGS_nms_threshold),
-                                            FLAGS_top_k, FLAGS_b, FLAGS_t);
+                                            FLAGS_top_k, backends[FLAGS_b], targets[FLAGS_t]);
+    slog::info << "Target device: " << FLAGS_t << slog::endl;
+    slog::info << "Computation backend: " << FLAGS_b << slog::endl;
     slog::info << "Reading model " << FLAGS_m << slog::endl;
     PerformanceMetrics metrics;
     Presenter presenter(FLAGS_u);
@@ -173,7 +176,7 @@ int main(int argc, char** argv)
 
         cv::Mat input_frame = cap->read();
         if (input_frame.empty()) {
-            slog::info << "Can't read an image from the input\n";
+            slog::info << "Can't read an image from the input" << slog::endl;
             break;
         }
         if (found == std::string::npos) {
@@ -199,7 +202,7 @@ int main(int argc, char** argv)
 
         presenter.drawGraphs(frame);
 
-        if (delay) {
+        if (delay && FLAGS_show) {
             metrics.update(time, frame, { 10, 22 }, cv::FONT_HERSHEY_COMPLEX, 0.65);
         }
         if (FLAGS_r) {
@@ -224,8 +227,10 @@ int main(int argc, char** argv)
         }
         frame_number++;
     }
-    slog::info << "Metrics report:" << slog::endl;
-    metrics.logTotal();
+    if (delay && FLAGS_show) {
+        slog::info << "Metrics report:" << slog::endl;
+        metrics.logTotal();
+    }
     slog::info << presenter.reportMeans() << slog::endl;
 
     return 0;

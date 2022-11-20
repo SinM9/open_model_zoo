@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 # Copyright (C)
 
 import logging as log
 import sys
+from pathlib import Path
 import argparse
 from time import perf_counter
 import numpy as np
@@ -10,6 +13,7 @@ import cv2 as cv
 from openvino.model_zoo.model_api.performance_metrics import put_highlighted_text, PerformanceMetrics
 from openvino.model_zoo.model_api.models import OutputTransform
 
+sys.path.append(str(Path(__file__).resolve().parents[2] / 'common/python'))
 import monitors
 from images_capture import open_images_capture
 from helpers import resolution
@@ -17,25 +21,20 @@ from helpers import resolution
 log.basicConfig(format='[ %(levelname)s ] %(message)s', level=log.DEBUG, stream=sys.stdout)
 
 def build_argparser():
-    backends = [cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_CUDA]
-    targets = [cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16]
-    help_msg_backends = "Choose one of the computation backends: {:d}: OpenCV implementation (default); {:d}: CUDA"
-    help_msg_targets = "Chose one of the target computation devices: {:d}: CPU (default); {:d}: CUDA; {:d}: CUDA fp16"
-    
     parser = argparse.ArgumentParser(add_help=False)
     args = parser.add_argument_group('Options')    
     args.add_argument('-h', '--help', action='help', help='Show this help message and exit.')
-    args.add_argument('--input', '-i', type=str, default="0", help='An input to process. The input must be a single image,\
+    args.add_argument('--input', '-i', type=str, default='0', help='An input to process. The input must be a single image,\
                      a folder of images, video file or camera id. Omit for using default camera.')
-    args.add_argument('--model', '-m', type=str, default='', required=True, help='Required. Path to the model')
-    args.add_argument('--backend', '-b', type=int, default=backends[0], help=help_msg_backends.format(*backends))
-    args.add_argument('--target', '-t', type=int, default=targets[0], help=help_msg_targets.format(*targets))
-    
+    args.add_argument('--model', '-m', type=str, default='', required=True, help='Required. Path to the model.')
+    args.add_argument('--backend', '-b', type=str, default='OPENCV', help='Choose one of the computation backends: OpenCV (default), CUDA.')
+    args.add_argument('--target', '-t', type=str, default='CPU', help='Chose one of the target computation devices: CPU (default), CUDA, CUDA_FP16.')
+
     common_model_args = parser.add_argument_group('Common model options')
     common_model_args .add_argument('--conf_threshold', type=float, default=0.9, help='Filter out faces of confidence < conf_threshold.')
     common_model_args .add_argument('--nms_threshold', type=float, default=0.3, help='Suppress bounding boxes of iou >= nms_threshold.')
     common_model_args .add_argument('--top_k', type=int, default=5000, help='Keep top_k bounding boxes before NMS.')
-    
+
     io_args = parser.add_argument_group('Input/output options')
     io_args.add_argument('--loop', default=False, action='store_true',
                          help='Optional. Enable reading the input in a loop.')
@@ -71,8 +70,8 @@ def visualize(image, results, box_color=(0, 255, 0), text_color=(255, 0, 0), fps
         bbox = det[0:4].astype(np.int32)
         cv.rectangle(output, (bbox[0], bbox[1]), (bbox[0]+bbox[2], bbox[1]+bbox[3]), box_color, 2)
 
-        conf = det[-1]
-        cv.putText(output, '{:.2f}'.format(conf), (bbox[0], bbox[1]+12), cv.FONT_HERSHEY_DUPLEX, 0.5, text_color)
+        conf = det[-1]*100
+        put_highlighted_text(output, '{:.0f}'.format(conf)+'%', (bbox[0], bbox[1]-3), cv.FONT_HERSHEY_DUPLEX, 0.5, text_color, 2)
 
         landmarks = det[4:14].astype(np.int32).reshape((5,2))
         for idx, landmark in enumerate(landmarks):
@@ -97,6 +96,9 @@ def main():
     cap = open_images_capture(args.input, args.loop)
     delay = int(cap.get_type() in {'VIDEO', 'CAMERA'})
 
+    backends = {'OPENCV':cv.dnn.DNN_BACKEND_OPENCV , 'CUDA':cv.dnn.DNN_BACKEND_CUDA}
+    targets = {'CPU':cv.dnn.DNN_TARGET_CPU, 'CUDA':cv.dnn.DNN_TARGET_CUDA, 'CUDA_FP16':cv.dnn.DNN_TARGET_CUDA_FP16}
+
     model = cv.FaceDetectorYN.create(
                 model=args.model,
                 config="",
@@ -104,8 +106,11 @@ def main():
                 score_threshold=args.conf_threshold,
                 nms_threshold=args.nms_threshold,
                 top_k=args.top_k,
-                backend_id=args.backend,
-                target_id=args.target)
+                backend_id=backends[args.backend],
+                target_id=targets[args.target])
+
+    log.info('\tTarget device: {}'.format(args.target))
+    log.info('\tComputation backend: {}'.format(args.backend))
     log.info('Reading model {}'.format(args.model))
 
     metrics = PerformanceMetrics()
@@ -123,16 +128,15 @@ def main():
         output_transform = OutputTransform(frame.shape[:2], args.output_resolution)
         if args.output_resolution:
             output_resolution = output_transform.new_resolution
-           
         else:
             output_resolution = (frame.shape[1], frame.shape[0])
-        
+
         frame = cv.resize(frame, output_resolution)
 
         presenter = monitors.Presenter(args.utilization_monitors, 55,
                                       (round(output_resolution[0] / 4),
                                        round(output_resolution[1] / 8)))
-        
+
         if args.output and not video_writer.open(args.output, cv.VideoWriter_fourcc(*'MJPG'),
                                                 cap.fps(), args.output_resolution):
             raise RuntimeError("Can't open video writer")
@@ -140,7 +144,7 @@ def main():
         # Inference
         model.setInputSize([frame.shape[1], frame.shape[0]])
         results = model.detect(frame)[1]
-        
+
         # Draw results on the input image
         frame = visualize(frame, results)
 
