@@ -32,8 +32,8 @@ DEFINE_string(i, "0", i_msg);
 constexpr char b_msg[] = "Select a computation backend: OPENCV (default), CUDA";
 DEFINE_string(b, "OPENCV", b_msg);
 
-constexpr char t_msg[] = "Select a target device: CPU (default), CUDA, CUDA_FP16";
-DEFINE_string(t, "CPU", t_msg);
+constexpr char d_msg[] = "Select a target device: CPU (default), CUDA, CUDA_FP16";
+DEFINE_string(d, "CPU", d_msg);
 
 constexpr char conf_msg[] = "Filter out faces of score < score_threshold";
 DEFINE_double(conf_threshold, 0.9, conf_msg);
@@ -76,7 +76,7 @@ void parse(int argc, char *argv[]) {
                   << "\n\t  -m <MODEL FILE>                             " << m_msg
                   << "\n\t[ -i <INPUT>]                                 " << i_msg
                   << "\n\t[ -b]                                         " << b_msg
-                  << "\n\t[ -t]                                         " << t_msg
+                  << "\n\t[ -d]                                         " << d_msg
                   << "\n\t[ -conf_threshold <NUMBER>]                   " << conf_msg
                   << "\n\t[ -nms_threshold <NUMBER>]                    " << nms_msg
                   << "\n\t[ -top_k <NUMBER>]                            " << top_k_msg
@@ -99,9 +99,9 @@ void parse(int argc, char *argv[]) {
         throw std::invalid_argument{"-m <MODEL FILE> can't be empty"};
     } if (!FLAGS_output_resolution.empty() && FLAGS_output_resolution.find("x") == std::string::npos) {
         throw std::logic_error("Correct format of -output_resolution parameter is \"width\"x\"height\".");
-    } if (!FLAGS_t.empty() && !(FLAGS_t == "CPU" || FLAGS_t == "CUDA" || FLAGS_t == "CUDA_FP16")) {
-        throw std::invalid_argument{"-t must be value from list: CPU (default), CUDA, CUDA_FP16"};
-    } if (!FLAGS_b.empty() && !(FLAGS_b == "OPENCV" || FLAGS_t == "CUDA")) {
+    } if (!FLAGS_d.empty() && !(FLAGS_d == "CPU" || FLAGS_d == "CUDA" || FLAGS_d == "CUDA_FP16")) {
+        throw std::invalid_argument{"-d must be value from list: CPU (default), CUDA, CUDA_FP16"};
+    } if (!FLAGS_b.empty() && !(FLAGS_b == "OPENCV" || FLAGS_b == "CUDA")) {
         throw std::invalid_argument{"-b must be value from list: OPENCV (default), CUDA"};
     }
     slog::info << ov::get_openvino_version() << slog::endl;
@@ -147,14 +147,14 @@ int main(int argc, char** argv) {
     // Preparing Input
     std::unique_ptr<ImagesCapture> cap = openImagesCapture(FLAGS_i, FLAGS_loop);
 
-    std::map<std::string, int> targets{{"CPU", cv::dnn::DNN_TARGET_CPU}, {"CUDA", cv::dnn::DNN_TARGET_CUDA}, {"CUDA_FP16", cv::dnn::DNN_TARGET_CUDA_FP16}};
+    std::map<std::string, int> devices{{"CPU", cv::dnn::DNN_TARGET_CPU}, {"CUDA", cv::dnn::DNN_TARGET_CUDA}, {"CUDA_FP16", cv::dnn::DNN_TARGET_CUDA_FP16}};
     std::map<std::string, int> backends{{"OPENCV", cv::dnn::DNN_BACKEND_OPENCV}, {"CUDA", cv::dnn::DNN_BACKEND_CUDA}};
 
     cv::Ptr<cv::FaceDetectorYN> model = cv::FaceDetectorYN::create(FLAGS_m, "", {320, 320}, 
                                             static_cast<float>(FLAGS_conf_threshold), 
                                             static_cast<float>(FLAGS_nms_threshold),
-                                            FLAGS_top_k, backends[FLAGS_b], targets[FLAGS_t]);
-    slog::info << "Target device: " << FLAGS_t << slog::endl;
+                                            FLAGS_top_k, backends[FLAGS_b], devices[FLAGS_d]);
+    slog::info << "Target device: " << FLAGS_d << slog::endl;
     slog::info << "Computation backend: " << FLAGS_b << slog::endl;
     slog::info << "Reading model " << FLAGS_m << slog::endl;
     PerformanceMetrics metrics;

@@ -28,7 +28,7 @@ def build_argparser():
                      a folder of images, video file or camera id. Omit for using default camera.')
     args.add_argument('--model', '-m', type=str, default='', required=True, help='Required. Path to the model.')
     args.add_argument('--backend', '-b', type=str, default='OPENCV', help='Choose one of the computation backends: OpenCV (default), CUDA.')
-    args.add_argument('--target', '-t', type=str, default='CPU', help='Chose one of the target computation devices: CPU (default), CUDA, CUDA_FP16.')
+    args.add_argument('--device', '-d', type=str, default='CPU', help='Chose one of the target computation devices: CPU (default), CUDA, CUDA_FP16.')
 
     common_model_args = parser.add_argument_group('Common model options')
     common_model_args .add_argument('--conf_threshold', type=float, default=0.9, help='Filter out faces of confidence < conf_threshold.')
@@ -97,7 +97,7 @@ def main():
     delay = int(cap.get_type() in {'VIDEO', 'CAMERA'})
 
     backends = {'OPENCV':cv.dnn.DNN_BACKEND_OPENCV , 'CUDA':cv.dnn.DNN_BACKEND_CUDA}
-    targets = {'CPU':cv.dnn.DNN_TARGET_CPU, 'CUDA':cv.dnn.DNN_TARGET_CUDA, 'CUDA_FP16':cv.dnn.DNN_TARGET_CUDA_FP16}
+    devices = {'CPU':cv.dnn.DNN_TARGET_CPU, 'CUDA':cv.dnn.DNN_TARGET_CUDA, 'CUDA_FP16':cv.dnn.DNN_TARGET_CUDA_FP16}
 
     model = cv.FaceDetectorYN.create(
                 model=args.model,
@@ -107,9 +107,9 @@ def main():
                 nms_threshold=args.nms_threshold,
                 top_k=args.top_k,
                 backend_id=backends[args.backend],
-                target_id=targets[args.target])
+                target_id=devices[args.device])
 
-    log.info('\tTarget device: {}'.format(args.target))
+    log.info('\tTarget device: {}'.format(args.device))
     log.info('\tComputation backend: {}'.format(args.backend))
     log.info('Reading model {}'.format(args.model))
 
