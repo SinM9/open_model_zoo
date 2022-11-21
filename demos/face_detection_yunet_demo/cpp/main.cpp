@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
 
         presenter.drawGraphs(frame);
 
-        if (delay && FLAGS_show) {
+        if (delay || !FLAGS_show) {
             metrics.update(time, frame, { 10, 22 }, cv::FONT_HERSHEY_COMPLEX, 0.65);
         }
         if (FLAGS_r) {
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
         }
         frame_number++;
     }
-    if (delay && FLAGS_show) {
+    if (delay || !FLAGS_show) {
         slog::info << "Metrics report:" << slog::endl;
         metrics.logTotal();
     }
