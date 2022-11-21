@@ -138,8 +138,7 @@ void printRawResults(cv::Mat& faces, int frame_id) {
     }
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     std::set_terminate(catcher);
 
     // Parsing and validation of input args
